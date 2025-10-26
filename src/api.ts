@@ -19,6 +19,7 @@ export async function fetchScanForSymbolsC(symbols: string[], opts?: { limit?: n
   return r.json();
 }
 
+/**
 export async function startWatch(body: {
   symbols: string[]; eqForTS?: string[]; limit?: number; moneyness?: number; backfill?: number; day?: string; expiries?: string[];
 }) {
@@ -30,6 +31,32 @@ export async function startWatch(body: {
   if (body.backfill != null) params.set("backfill", String(body.backfill));
   if (body.day) params.set("day", body.day);
   if (body.expiries?.length) params.set("expiries", body.expiries.join(","));
+  const url = `${SERVER_HTTP}/watch?${params.toString()}`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+*/
+export async function startWatch(body: {
+  symbols: string[];
+  eqForTS?: string[];
+  limit?: number;
+  moneyness?: number;
+  backfill?: number;
+  day?: string;
+  expiries?: string[];
+  provider?: "tradier" | "polygon"; // NEW
+}) {
+  const params = new URLSearchParams();
+  params.set("symbols", body.symbols.join(","));
+  if (body.eqForTS?.length) params.set("eqForTS", body.eqForTS.join(","));
+  if (body.limit != null) params.set("limit", String(body.limit));
+  if (body.moneyness != null) params.set("moneyness", String(body.moneyness));
+  if (body.backfill != null) params.set("backfill", String(body.backfill));
+  if (body.day) params.set("day", body.day);
+  if (body.expiries?.length) params.set("expiries", body.expiries.join(","));
+  if (body.provider) params.set("provider", body.provider); // NEW
+
   const url = `${SERVER_HTTP}/watch?${params.toString()}`;
   const r = await fetch(url);
   if (!r.ok) throw new Error(await r.text());

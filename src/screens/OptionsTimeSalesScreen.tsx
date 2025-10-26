@@ -4,6 +4,7 @@ import SearchBar from "../components/SearchBar";
 import { connectWS, ServerMsg } from "../ws";
 import { parseOCC } from "../occ";
 import { startWatch } from "../api";
+import { useProvider } from "../state/ProviderContext";
 
 /* ========== Types ========== */
 type Row = {
@@ -54,6 +55,7 @@ const pad3 = (n:number)=> n<10?`00${n}`:n<100?`0${n}`:`${n}`;
 
 /* ========== Component ========== */
 export default function OptionsTimeSalesScreen() {
+  const { provider } = useProvider();
   const [symbol, setSymbol] = useState("SPY");
   const [equityFallback, setEquityFallback] = useState(true);
   const [minQty, setMinQty] = useState<number>(100);
@@ -95,10 +97,21 @@ export default function OptionsTimeSalesScreen() {
   const requestDataFor = useRef(debounce(async (root:string) => {
     const s = root.trim().toUpperCase(); if (!s) return;
     try {
-      await startWatch({ symbols:[s], eqForTS:[s], backfill: 10, limit: 200, moneyness: 0.25 });
+      await startWatch({ symbols:[s], eqForTS:[s], backfill: 10, limit: 200, moneyness: 0.25, provider, });
     } catch (e) { console.warn("startWatch(OTS) failed:", e); }
   }, 400)).current;
-  useEffect(() => { requestDataFor(symbol); }, [symbol]);
+  //useEffect(() => { requestDataFor(symbol); }, [symbol]);
+  useEffect(() => {
+    console.log(`[OTS] startWatch for ${symbol} with provider=${provider}`);
+    // wipe local caches so the list reflects the new feed immediately
+    setRowsByRoot({});
+    setEqRows({});
+    lastByOCC.current = {};
+    lastByRootEq.current = {};  
+
+    console.log(`[OTS] startWatch for ${symbol} with provider=${provider}`);
+    requestDataFor(symbol);
+  }, [symbol, provider]);
 
   useEffect(() => {
     wsRef.current = connectWS({

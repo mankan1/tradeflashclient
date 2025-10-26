@@ -3,6 +3,7 @@ import { FlatList, View, Text, TouchableOpacity, TextInput, StyleSheet } from "r
 import SearchBar from "../components/SearchBar";
 import { connectWS, ServerMsg } from "../ws";
 import { startWatch } from "../api";
+import { useProvider } from "../state/ProviderContext";
 
 // ===================== Types =====================
 type FlashItem = {
@@ -61,6 +62,7 @@ const Toggle = ({ label, value, onToggle }: { label: string; value: boolean; onT
 );
 
 export default function TradeFlashScreen() {
+  const { provider } = useProvider(); 
   const [symbol, setSymbol] = useState("SPY");
   const [minQty, setMinQty] = useState<number>(100);
   const [items, setItems] = useState<FlashItem[]>([]);
@@ -83,10 +85,10 @@ export default function TradeFlashScreen() {
   const requestDataFor = useRef(debounce(async (root: string) => {
     const s = root.trim().toUpperCase(); if (!s) return;
     try {
-      await startWatch({ symbols: [s], eqForTS: [s], backfill: 10, limit: 200, moneyness: 0.25 });
+      await startWatch({ symbols: [s], eqForTS: [s], backfill: 10, limit: 200, moneyness: 0.25, provider });
     } catch (e) { console.warn("startWatch(TF) failed:", e); }
   }, 400)).current;
-  useEffect(() => { requestDataFor(symbol); }, [symbol]);
+  useEffect(() => { requestDataFor(symbol); }, [symbol, provider]);
 
   // Render-time formatter: respects the ms toggle instantly
   const fmtTickTime = (raw?: string, fallbackTs?: number) => {
