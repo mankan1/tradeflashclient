@@ -1,13 +1,13 @@
+// App.tsx
 import React, { useEffect } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
+
 import TradeFlashScreen from "./src/screens/TradeFlashScreen";
 import OptionsTimeSalesScreen from "./src/screens/OptionsTimeSalesScreen";
 import ScannersScreen from "./src/screens/ScannersScreen";
 import AlpacaScannersScreen from "./src/screens/AlpacaScannersScreen";
 import { startWatch } from "./src/api";
-import AlpacaPopularScreen from "./src/screens/AlpacaPopularScreen";
-import UoaPopularCombinedScreen from "./src/screens/UoaPopularCombinedScreen";
 
 const Tab = createMaterialTopTabNavigator();
 
@@ -16,12 +16,12 @@ export default function App() {
     (async () => {
       try {
         await startWatch({
-          symbols: ["SPY","QQQ","NVDA"],
+          symbols: ["SPY", "QQQ", "NVDA"],
           eqForTS: ["SPY"],
-          backfill: 10,
+          limit: 200,
           moneyness: 0.25,
-          autoOcc: true,
-          // day: "2025-10-24", // optional backfill day if you want
+          backfill: 15,
+          day: "2025-10-24",
         });
       } catch (e) {
         console.warn("startWatch failed:", e);
@@ -34,10 +34,8 @@ export default function App() {
       <Tab.Navigator>
         <Tab.Screen name="Trade Flash" component={TradeFlashScreen} />
         <Tab.Screen name="Options Time & Sales" component={OptionsTimeSalesScreen} />
-        <Tab.Screen name="Alpaca Popular" component={AlpacaPopularScreen} /> 
         <Tab.Screen name="Scanners" component={ScannersScreen} />
         <Tab.Screen name="Alpaca" component={AlpacaScannersScreen} />
-        <Tab.Screen name="UOA • Popular Combo" component={UoaPopularCombinedScreen} /> 
       </Tab.Navigator>
     </NavigationContainer>
   );
