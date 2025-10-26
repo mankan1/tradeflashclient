@@ -1,10 +1,36 @@
 const SERVER_HTTP = process.env.EXPO_PUBLIC_SERVER_HTTP || "http://localhost:8080";
+// import { SERVER_HTTP } from "./config";
+
+export async function updateProviderCredentials(body: {
+  tradier?: { token: string };
+  alpaca?: { key: string; secret: string };
+}) {
+  const r = await fetch(`${SERVER_HTTP}/settings/credentials`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
 
 export async function fetchPopularCombinedSymbols(top = 40) {
   const SERVER = process.env.EXPO_PUBLIC_SERVER || 'http://localhost:8080';
   const r = await fetch(`${SERVER}/popular/combined?top=${top}`);
   if (!r.ok) throw new Error(await r.text());
   return r.json() as Promise<{ ok: true; ts: number; symbols: string[]; source: string }>;
+}
+
+export async function fetchScan(opts: { provider?: "alpaca"|"polygon"; by?: "volume"|"trade_count"; top?: number; moneyness?: number; minVol?: number }) {
+  const p = new URLSearchParams();
+  if (opts.provider)  p.set("provider", opts.provider);
+  if (opts.by)        p.set("by", opts.by);
+  if (opts.top != null)        p.set("top", String(opts.top));
+  if (opts.moneyness != null)  p.set("moneyness", String(opts.moneyness));
+  if (opts.minVol != null)     p.set("minVol", String(opts.minVol));
+  const r = await fetch(`${SERVER_HTTP}/scan?${p.toString()}`);
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
 }
 
 export async function fetchScanForSymbolsC(symbols: string[], opts?: { limit?: number; moneyness?: number; minVol?: number }) {
@@ -94,13 +120,21 @@ export async function fetchScanForSymbols(symbols: string[], opts?: { limit?: nu
 }
 
 // --- Alpaca Popular (proxied by our server) ---
-export async function fetchPopular() {
-  const r = await fetch(`${SERVER_HTTP}/popular`);
-  const text = await r.text();
-  let json: any;
-  try { json = JSON.parse(text); } catch { json = { ok:false, data:text }; }
-  if (!r.ok || !json.ok) throw json;
-  return json as { ok:true; ts:number; symbols:string[]; source:string };
+// export async function fetchPopular() {
+//   const r = await fetch(`${SERVER_HTTP}/popular`);
+//   const text = await r.text();
+//   let json: any;
+//   try { json = JSON.parse(text); } catch { json = { ok:false, data:text }; }
+//   if (!r.ok || !json.ok) throw json;
+//   return json as { ok:true; ts:number; symbols:string[]; source:string };
+// }
+
+export async function fetchPopular(provider?: "alpaca"|"polygon") {
+  const p = new URLSearchParams();
+  if (provider) p.set("provider", provider);
+  const r = await fetch(`${SERVER_HTTP}/popular?${p.toString()}`);
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
 }
 
 export async function fetchScans(opts?: { symbols?: string[]; limit?: number; moneyness?: number; minVol?: number }) {
