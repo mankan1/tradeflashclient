@@ -21,6 +21,18 @@ import { DataEnvStore, useDataEnv } from "./src/state/DataEnvContext";
 import ProviderBanner from "./src/components/ProviderBanner";
 
 const Tab = createMaterialTopTabNavigator();
+// Returns true during regular U.S. market hours (ET) Mon–Fri, 09:30–16:00
+export function isMarketOpenNY(): boolean {
+  const now = new Date();
+  // Convert local time -> New York time without extra deps
+  const ny = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }));
+
+  const dow = ny.getDay(); // 0=Sun ... 6=Sat
+  if (dow === 0 || dow === 6) return false;
+
+  const mins = ny.getHours() * 60 + ny.getMinutes();
+  return mins >= (9 * 60 + 30) && mins < (16 * 60); // 09:30–16:00
+}
 
 function Root() {
   const { provider, ready } = useProvider();
@@ -32,15 +44,32 @@ function Root() {
     console.log(`[App] requesting /watch with provider=${provider}`);
     (async () => {
       try {
-        const resp = await startWatch({
-          symbols: ["SPY", "QQQ", "NVDA"],
-          eqForTS: ["SPY"],
-          backfill: 10,
-          moneyness: 0.25,
-          limit: 200,
-          provider, // <- ALWAYS pass current provider
-        });
+        // const resp = await startWatch({
+        //   symbols: ["SPY", "QQQ", "NVDA"],
+        //   eqForTS: ["SPY"],
+        //   backfill: 10,
+        //   moneyness: 0.25,
+        //   limit: 200,
+        //   provider, // <- ALWAYS pass current provider
+        // });
+        const live = isMarketOpenNY() ? 1 : 0;
 
+        const payload: Record<string, any> = {
+          symbols:   ["SPY", "QQQ", "NVDA"],
+          eqForTS:   ["SPY"],
+          provider,                 // "tradier" | "alpaca" | "both"
+          backfill:  live ? 10 : 0,
+          moneyness: 0.25,
+          limit:     200,
+          live,
+          replay:    live ? 0 : 1,
+          ...(live
+            ? {}
+            : { minutes: 390, speed: 60 }) // only include in replay
+        };
+
+        console.log("[startWatch] ->", payload);
+        const resp = await startWatch(payload);        
         // server-confirmed provider (what’s actually active)
         const confirmed =
           (resp?.env?.provider as "tradier" | "polygon" | undefined) ||

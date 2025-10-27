@@ -62,7 +62,7 @@ export async function startWatch(body: {
   if (!r.ok) throw new Error(await r.text());
   return r.json();
 }
-*/
+// */
 export async function startWatch(body: {
   symbols: string[];
   eqForTS?: string[];
@@ -72,22 +72,73 @@ export async function startWatch(body: {
   day?: string;
   expiries?: string[];
   provider?: "tradier"|"alpaca"|"polygon"|"both";
+  live?: 0|1;
+  replay?: 0|1;
+  minutes?: number;
+  speed?: number;
 }) {
-  const params = new URLSearchParams();
-  params.set("symbols", body.symbols.join(","));
-  if (body.eqForTS?.length) params.set("eqForTS", body.eqForTS.join(","));
-  if (body.limit != null) params.set("limit", String(body.limit));
-  if (body.moneyness != null) params.set("moneyness", String(body.moneyness));
-  if (body.backfill != null) params.set("backfill", String(body.backfill));
-  if (body.day) params.set("day", body.day);
-  if (body.expiries?.length) params.set("expiries", body.expiries.join(","));
-  if (body.provider) params.set("provider", body.provider); // NEW
+  const qs = new URLSearchParams();
+  const set = (k: string, v: any) => { if (v != null) qs.set(k, String(v)); };
+  const setCSV = (k: string, arr?: string[]) => { if (arr?.length) qs.set(k, arr.join(",")); };
 
-  const url = `${SERVER_HTTP}/watch?${params.toString()}`;
-  const r = await fetch(url);
-  if (!r.ok) throw new Error(await r.text());
-  return r.json();
+  setCSV("symbols", body.symbols);
+  setCSV("eqForTS", body.eqForTS);
+  set("limit", body.limit);
+  set("moneyness", body.moneyness);
+  set("backfill", body.backfill);
+  set("day", body.day);
+  setCSV("expiries", body.expiries);
+  set("provider", body.provider);
+  set("live", body.live);
+  set("replay", body.replay);
+  set("minutes", body.minutes);
+  set("speed", body.speed);
+
+  const url = `${SERVER_HTTP}/watch?${qs.toString()}`;
+
+  const ctl = new AbortController();
+  const timeout = setTimeout(() => ctl.abort(), 15_000);
+
+  try {
+    const res = await fetch(url, { method: "GET", signal: ctl.signal });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(text || `HTTP ${res.status}`);
+    }
+    return await res.json();
+  } catch (err: any) {
+    // Surface nicer message for CORS/timeout
+    if (err?.name === "AbortError") throw new Error("Request timed out");
+    throw new Error(`startWatch failed: ${err?.message || String(err)}`);
+  } finally {
+    clearTimeout(timeout);
+  }
 }
+// export async function startWatch(body: {
+//   symbols: string[];
+//   eqForTS?: string[];
+//   limit?: number;
+//   moneyness?: number;
+//   backfill?: number;
+//   day?: string;
+//   expiries?: string[];
+//   provider?: "tradier"|"alpaca"|"polygon"|"both";
+// }) {
+//   const params = new URLSearchParams();
+//   params.set("symbols", body.symbols.join(","));
+//   if (body.eqForTS?.length) params.set("eqForTS", body.eqForTS.join(","));
+//   if (body.limit != null) params.set("limit", String(body.limit));
+//   if (body.moneyness != null) params.set("moneyness", String(body.moneyness));
+//   if (body.backfill != null) params.set("backfill", String(body.backfill));
+//   if (body.day) params.set("day", body.day);
+//   if (body.expiries?.length) params.set("expiries", body.expiries.join(","));
+//   if (body.provider) params.set("provider", body.provider); // NEW
+
+//   const url = `${SERVER_HTTP}/watch?${params.toString()}`;
+//   const r = await fetch(url);
+//   if (!r.ok) throw new Error(await r.text());
+//   return r.json();
+// }
 
 // --- add below your other exports ---
 
