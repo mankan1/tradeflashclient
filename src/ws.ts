@@ -43,6 +43,15 @@ export type ServerMsg = QuoteMsg | EquityTSMsg | OptionTSMsg;
 
 export function connectWS(handlers:{ onMsg:(m:ServerMsg)=>void; onOpen?():void; onClose?():void; onError?(e:any):void; }) {
   const ws = new WebSocket(SERVER_WS);
+
+  ws.onopen = () => {
+    ws.send('Hello from the client!')
+  }
+
+  ws.onmessage = (event) => {
+    console.log('Received:', event.data)
+  }
+
   ws.onopen = () => handlers.onOpen?.();
   ws.onclose = () => handlers.onClose?.();
   ws.onerror = (e) => handlers.onError?.(e as any);
