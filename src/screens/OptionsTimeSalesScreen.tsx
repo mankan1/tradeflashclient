@@ -5,6 +5,7 @@ import { connectWS, ServerMsg } from "../ws";
 import { parseOCC } from "../occ";
 import { startWatch } from "../api";
 import { useProvider } from "../state/ProviderContext";
+import ProviderChip from "../components/ProviderChip";
 
 /* ========== Types ========== */
 type Row = {
@@ -116,7 +117,9 @@ export default function OptionsTimeSalesScreen() {
   useEffect(() => {
     wsRef.current = connectWS({
       onMsg: (m: ServerMsg) => {
+        
         if (m.type === "option_ts") {
+          const provider = (m as any).provider as ("tradier"|"alpaca"|undefined);
           const occ = m.symbol; const parsed = parseOCC(occ); const root = parsed?.root ?? occ;
           const price = Number(m.data.price); const qty = Number(m.data.qty);
           if (!(price > 0 && qty > 0)) return;
@@ -139,12 +142,13 @@ export default function OptionsTimeSalesScreen() {
             priorVol: (m.data as any).priorVol,
             at: (m.data as any).at,
             action: (m.data as any).action,
-            action_conf: (m.data as any).action_conf
+            action_conf: (m.data as any).action_conf, provider
           };
           setRowsByRoot(prev => ({ ...prev, [root]: [r, ...(prev[root] ?? [])].slice(0, 1200) }));
         }
 
         if (m.type === "equity_ts") {
+          const provider = (m as any).provider as ("tradier"|"alpaca"|undefined);
           const root = m.symbol;
           const price = Number((m.data as any).price ?? (m.data as any).last ?? 0);
           const qty = Number((m.data as any).volume ?? (m.data as any).size ?? (m.data as any).qty ?? (m.data as any).quantity ?? 0);
@@ -157,7 +161,7 @@ export default function OptionsTimeSalesScreen() {
 
           const r: EqRow = {
             id: nextId(), ts, tstr: fmtTickTime(ts, (m.data as any).time),
-            symbol: root, qty, price, ...chosen, at: (m.data as any).at
+            symbol: root, qty, price, ...chosen, at: (m.data as any).at, provider
           };
           setEqRows(prev => ({ ...prev, [root]: [r, ...(prev[root] ?? [])].slice(0, 1200) }));
         }
@@ -338,6 +342,7 @@ export default function OptionsTimeSalesScreen() {
                 {item.oi != null ? <Text style={s.pill}>OI {fmtK(item.oi)}</Text> : null}
                 {item.priorVol != null ? <Text style={s.pill}>Vol prior {fmtK(item.priorVol)}</Text> : null}
                 <ActionBadge action={item.action} conf={item.action_conf} />
+                <ProviderChip p={(item as any).provider} />
               </View>
             </View>
           ) : (
@@ -350,6 +355,7 @@ export default function OptionsTimeSalesScreen() {
                 <Text>Qty {item.qty} @ {item.price}</Text>
                 <SideBadge side={item.side} src={item.side_src} />
                 <Text style={s.pill}>at {item.at ?? "—"}</Text>
+                <ProviderChip p={(item as any).provider} />
               </View>
             </View>
           )

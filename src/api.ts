@@ -71,7 +71,7 @@ export async function startWatch(body: {
   backfill?: number;
   day?: string;
   expiries?: string[];
-  provider?: "tradier" | "polygon"; // NEW
+  provider?: "tradier"|"alpaca"|"polygon"|"both";
 }) {
   const params = new URLSearchParams();
   params.set("symbols", body.symbols.join(","));

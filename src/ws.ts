@@ -39,7 +39,9 @@ export type OptionTSMsg = {
   };
 };
 
-export type ServerMsg = QuoteMsg | EquityTSMsg | OptionTSMsg;
+export type ServerMsg = QuoteMsg | EquityTSMsg | OptionTSMsg | { type: "equity_ts"; symbol: string; data: any; provider?: "tradier"|"alpaca" }
+  | { type: "option_ts"; symbol: string; data: any; provider?: "tradier"|"alpaca" }
+  | { type: "quotes"; data: any; side?: string; side_src?: string; provider?: "tradier"|"alpaca" };
 
 export function connectWS(handlers:{ onMsg:(m:ServerMsg)=>void; onOpen?():void; onClose?():void; onError?(e:any):void; }) {
   const ws = new WebSocket(SERVER_WS);

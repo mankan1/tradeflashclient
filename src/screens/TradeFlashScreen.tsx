@@ -4,6 +4,7 @@ import SearchBar from "../components/SearchBar";
 import { connectWS, ServerMsg } from "../ws";
 import { startWatch } from "../api";
 import { useProvider } from "../state/ProviderContext";
+import ProviderChip from "../components/ProviderChip";
 
 // ===================== Types =====================
 type FlashItem = {
@@ -127,6 +128,8 @@ export default function TradeFlashScreen() {
   useEffect(() => {
     wsRef.current = connectWS({
       onMsg: (m: ServerMsg) => {
+        const provider = (m as any).provider as ("tradier"|"alpaca"|undefined);
+
         // ----- Quotes (NBBO + trade-like last/size) -----
         if (m.type === "quotes") {
           const q: any = m.data;
@@ -149,7 +152,7 @@ export default function TradeFlashScreen() {
               : inferSideClient(sym, price);
             const edge = classifyEdge(sym, price);
             setItems(prev => [
-              { id: nextId(), ts: Date.now(), rawTime: q.time, symbol: sym, qty, price, notional: price*qty, edge, ...chosen },
+              { id: nextId(), ts: Date.now(), rawTime: q.time, symbol: sym, qty, price, notional: price*qty, edge, ...chosen, provider },
               ...prev
             ].slice(0, 800));
           }
@@ -167,7 +170,7 @@ export default function TradeFlashScreen() {
             : inferSideClient(m.symbol, price);
           const edge = classifyEdge(m.symbol, price, d.bid, d.ask);
           setItems(prev => [
-            { id: nextId(), ts: Date.now(), rawTime: d.time, symbol: m.symbol, qty, price, notional: price * qty, edge, ...chosen },
+            { id: nextId(), ts: Date.now(), rawTime: d.time, symbol: m.symbol, qty, price, notional: price * qty, edge, ...chosen, provider },
             ...prev
           ].slice(0, 800));
           return;
@@ -277,6 +280,7 @@ export default function TradeFlashScreen() {
               {item.edge ? (
                 <Text style={[s.edgeTag, item.edge === 'ask' ? s.edgeAsk : s.edgeBid]}>{item.edge.toUpperCase()}</Text>
               ) : null}
+              <ProviderChip p={(item as any).provider} />
             </View>
             {item.notional ? <Text>Notional ${Math.round(item.notional).toLocaleString()}</Text> : null}
           </View>

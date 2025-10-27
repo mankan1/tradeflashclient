@@ -80,6 +80,7 @@ export default function SettingsScreen() {
       <View style={s.row}>
         <Pill on={provider==="tradier"} label="Tradier (real-time)" onPress={() => setProvider("tradier")} />
         <Pill on={provider==="polygon"} label="Polygon (delayed)" onPress={() => setProvider("polygon")} />
+        <Pill on={provider==="both"} label="Both" onPress={() => setProvider("both")} />
       </View>
 
       <View style={s.noteBox}>

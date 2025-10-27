@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-export type Provider = "tradier" | "polygon";
+export type Provider = "tradier" | "polygon" | "alpaca" | "both";
 const KEY = "tradeflash.provider";
 
 type Ctx = {

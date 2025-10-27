@@ -10,6 +10,8 @@ import OptionsOnlyFlashScreen from "./src/screens/OptionsOnlyFlashScreen"
 import ScannersScreen from "./src/screens/ScannersScreen";
 import AlpacaScannersScreen from "./src/screens/AlpacaScannersScreen";
 import AlpacaPopularScreen from "./src/screens/AlpacaPopularScreen";
+import EquitiesAlpaca from "./src/screens/EquitiesAlpaca";
+import OptionsFlowApl from "./src/screens/OptionsFlowApl";
 import UoaPopularCombinedScreen from "./src/screens/UoaPopularCombinedScreen";
 import SettingsScreen from "./src/screens/SettingsScreen";
 
@@ -65,6 +67,8 @@ function Root() {
         <Tab.Screen name="Alpaca Popular" component={AlpacaPopularScreen} />
         <Tab.Screen name="Scanners" component={ScannersScreen} />
         <Tab.Screen name="Alpaca" component={AlpacaScannersScreen} />
+        <Tab.Screen name="EquitiesAlpaca" component={EquitiesAlpaca} />
+        <Tab.Screen name="OptionsFlowApl" component={OptionsFlowApl} />  
         <Tab.Screen name="UOA • Popular Combo" component={UoaPopularCombinedScreen} />
         <Tab.Screen name="Settings" component={SettingsScreen} />
       </Tab.Navigator>

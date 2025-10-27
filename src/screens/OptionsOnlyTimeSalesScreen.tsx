@@ -5,6 +5,7 @@ import { connectWS, ServerMsg } from "../ws";
 import { parseOCC } from "../occ";
 import { startWatch } from "../api";
 import { useProvider } from "../state/ProviderContext";
+import ProviderChip from "../components/ProviderChip";
 
 type Row = {
   id: string; ts: number; tstr: string;
@@ -69,6 +70,7 @@ export default function OptionsOnlyTimeSalesScreen() {
   useEffect(() => {
     wsRef.current = connectWS({
       onMsg: (m: ServerMsg) => {
+        const provider = (m as any).provider as ("tradier"|"alpaca"|undefined);
         if (m.type !== "option_ts") return;
         const occ = m.symbol; const p = parseOCC(occ);
         if (!p?.root || p.root !== root.trim().toUpperCase()) return;
@@ -89,7 +91,7 @@ export default function OptionsOnlyTimeSalesScreen() {
           qty, price,
           side: m.data.side, side_src: m.data.side_src,
           oi: m.data.oi, priorVol: m.data.priorVol, at: m.data.at,
-          action: m.data.action, action_conf: m.data.action_conf
+          action: m.data.action, action_conf: m.data.action_conf, provider
         }, ...prev].slice(0, 1500));
       }
     });
@@ -198,6 +200,7 @@ export default function OptionsOnlyTimeSalesScreen() {
               <Text style={[s.pill,{backgroundColor:actBg(item.action), fontWeight:"700"}]}>
                 {item.action ?? "—"}{item.action_conf ? ` (${item.action_conf})` : ""}
               </Text>
+              <ProviderChip p={(item as any).provider} />
             </View>
           </View>
         )}

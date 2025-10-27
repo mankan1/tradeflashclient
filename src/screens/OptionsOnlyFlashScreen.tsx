@@ -5,6 +5,7 @@ import { connectWS, ServerMsg } from "../ws";
 import { parseOCC } from "../occ";
 import { startWatch } from "../api";
 import { useProvider } from "../state/ProviderContext";
+import ProviderChip from "../components/ProviderChip";
 
 type Row = {
   id: string; ts: number; tstr: string; occ: string;
@@ -33,6 +34,7 @@ export default function OptionsOnlyFlashScreen() {
   useEffect(() => {
     wsRef.current = connectWS({
       onMsg: (m: ServerMsg) => {
+        const provider = (m as any).provider as ("tradier"|"alpaca"|undefined);
         if (m.type !== "option_ts") return;
         const p = parseOCC(m.symbol); if (!p?.root || p.root !== root.trim().toUpperCase()) return;
         const qty = Number(m.data.qty||0), price = Number(m.data.price||0);
@@ -45,7 +47,7 @@ export default function OptionsOnlyFlashScreen() {
           occ: m.symbol,
           qty, price,
           side: m.data.side, side_src: m.data.side_src,
-          action: m.data.action, action_conf: m.data.action_conf
+          action: m.data.action, action_conf: m.data.action_conf, provider
         }, ...prev].slice(0, 1200));
       }
     });
@@ -92,6 +94,7 @@ export default function OptionsOnlyFlashScreen() {
                   {item.action}{item.action_conf ? ` (${item.action_conf})` : ""}
                 </Text>
               ) : null}
+              <ProviderChip p={(item as any).provider} />
             </View>
           </View>
         )}
