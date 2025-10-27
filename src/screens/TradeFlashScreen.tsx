@@ -65,10 +65,14 @@ const Toggle = ({ label, value, onToggle }: { label: string; value: boolean; onT
 export default function TradeFlashScreen() {
   const { provider } = useProvider(); 
   const [symbol, setSymbol] = useState("SPY");
-  const [minQty, setMinQty] = useState<number>(100);
+  const [minQty, setMinQty] = useState<number>(1);
   const [items, setItems] = useState<FlashItem[]>([]);
   const seq = useRef(0); const nextId = () => `row_${++seq.current}`;
   const wsRef = useRef<WebSocket | null>(null);
+  // Top of component:
+  const optCountRef = useRef(0);
+  const eqCountRef  = useRef(0);
+  const lastOptRef  = useRef<any>(null);
 
   // ---------- New toggles ----------
   const [hideUnknown, setHideUnknown] = useState(false); // Hide unknown side (—)
@@ -126,6 +130,15 @@ export default function TradeFlashScreen() {
   };
 
   useEffect(() => {
+    const t = setInterval(() => {
+      if (optCountRef.current || eqCountRef.current) {
+        console.log(`[WS stats] equity_ts=${eqCountRef.current} option_ts=${optCountRef.current}`, lastOptRef.current);
+      }
+    }, 3000);
+    return () => clearInterval(t);
+  }, []);
+
+  useEffect(() => {
     wsRef.current = connectWS({
       onMsg: (m: ServerMsg) => {
         const provider = (m as any).provider as ("tradier"|"alpaca"|undefined);
@@ -161,6 +174,7 @@ export default function TradeFlashScreen() {
 
         // ----- Equity Trade & Sale (T&S) -----
         if (m.type === "equity_ts") {
+          eqCountRef.current += 1;
           const d: any = m.data;
           const price = Number(d.price ?? d.last ?? 0);
           const qty = Number(d.volume ?? d.size ?? d.qty ?? d.quantity ?? 0);
@@ -175,6 +189,40 @@ export default function TradeFlashScreen() {
           ].slice(0, 800));
           return;
         }
+        // ----- Option Trade (per-contract qty/price) -----
+        if (m.type === "option_ts") {
+          const d: any = m.data;
+          const occ = m.symbol || d.symbol || "";                 // OCC like SPY251027C00678000
+          const price = Number(d.price ?? d.last ?? 0);
+          const qty   = Number(d.qty ?? d.size ?? d.quantity ?? 0);
+          if (!(price > 0 && qty > 0)) return;
+          
+          optCountRef.current += 1;
+          lastOptRef.current = m;
+          // minimal fingerprint
+          console.log("[WS option_ts]",
+            { sym: m.symbol || m?.data?.symbol, price: m?.data?.price, qty: m?.data?.qty, side: m?.data?.side });
+
+          // time string (prefer upstream ts if present)
+          const tstr = fmtTickTime(String(d.time ?? d.ts ?? ""), Date.now());
+
+          // side & source (server usually sends side/side_src already)
+          const chosen = d.side
+            ? { side: d.side as FlashItem["side"], side_src: ((d.side_src || "mid") as any) }
+            : inferSideClient(occ, price);
+
+          // classify edge using bid/ask sent on the message or cached NBBO
+          const edge = classifyEdge(occ, price, d?.book?.bid ?? d.bid, d?.book?.ask ?? d.ask);
+
+          // options notional usually means contracts * price * 100
+          const notional = price * qty * 100;
+
+          setItems(prev => [
+            { id: nextId(), ts: Date.now(), tstr, symbol: occ, qty, price, notional, edge, ...chosen },
+            ...prev
+          ].slice(0, 800));
+          return;
+        }        
       }
     });
     return () => wsRef.current?.close();

@@ -38,25 +38,85 @@ export type OptionTSMsg = {
     action_conf?: "high"|"medium"|"low";
   };
 };
+export type ServerMsg =
+  | { type: "quotes";     data: any; provider?: "tradier" | "alpaca" | "polygon"; }
+  | { type: "equity_ts";  symbol: string; data: any; provider?: "tradier" | "alpaca" | "polygon"; }
+  | { type: "option_ts";  symbol: string; data: any; provider?: "tradier" | "alpaca" | "polygon"; }
+  | { type: string;       [k: string]: any };
 
-export type ServerMsg = QuoteMsg | EquityTSMsg | OptionTSMsg | { type: "equity_ts"; symbol: string; data: any; provider?: "tradier"|"alpaca" }
-  | { type: "option_ts"; symbol: string; data: any; provider?: "tradier"|"alpaca" }
-  | { type: "quotes"; data: any; side?: string; side_src?: string; provider?: "tradier"|"alpaca" };
+const ENV_WS =
+  (typeof process !== "undefined" && (process as any).env?.EXPO_PUBLIC_WS_ORIGIN) ||
+  (typeof window !== "undefined" && (window as any).__WS_ORIGIN);
 
-export function connectWS(handlers:{ onMsg:(m:ServerMsg)=>void; onOpen?():void; onClose?():void; onError?(e:any):void; }) {
-  const ws = new WebSocket(SERVER_WS);
+export const SERVER_WS_BASE =
+  (ENV_WS || "wss://tradeflash-ypmg.onrender.com").replace(/\/+$/, ""); // no trailing slash
+
+function buildWsUrl(path = "/ws", qs?: Record<string, string | number | boolean>) {
+  const p = path.startsWith("/") ? path : `/${path}`;
+  const q = qs ? `?${new URLSearchParams(Object.entries(qs).map(([k, v]) => [k, String(v)])).toString()}` : "";
+  return `${SERVER_WS_BASE}${p}${q}`;
+}
+
+export function connectWS(
+  handlers: {
+    onMsg: (m: ServerMsg) => void;
+    onOpen?(): void;
+    onClose?(): void;
+    onError?(e: any): void;
+  },
+  opts?: { path?: string; qs?: Record<string, string | number | boolean> }
+): WebSocket {
+  const url = buildWsUrl(opts?.path ?? "/ws", opts?.qs);
+  const ws = new WebSocket(url);
+
+  // Toggle in DevTools:  window.__LOG_WS__ = true
+  const shouldLog = () => (typeof window !== "undefined" ? !!(window as any).__LOG_WS__ : false);
 
   ws.onopen = () => {
-    ws.send('Hello from the client!')
-  }
+    if (shouldLog()) console.log("[WS open]", url);
+    handlers.onOpen?.();
+  };
 
-  ws.onmessage = (event) => {
-    console.log('Received:', event.data)
-  }
+  ws.onclose = (ev) => {
+    if (shouldLog()) console.log("[WS close]", { code: ev.code, reason: ev.reason });
+    handlers.onClose?.();
+  };
 
-  ws.onopen = () => handlers.onOpen?.();
-  ws.onclose = () => handlers.onClose?.();
-  ws.onerror = (e) => handlers.onError?.(e as any);
-  ws.onmessage = (e) => { try { handlers.onMsg(JSON.parse(e.data) as ServerMsg); } catch {} };
+  ws.onerror = (e) => {
+    if (shouldLog()) console.warn("[WS error]", e);
+    handlers.onError?.(e as any);
+  };
+
+  ws.onmessage = (e) => {
+    try {
+      const msg = JSON.parse(typeof e.data === "string" ? e.data : String(e.data));
+      if (shouldLog()) console.log("[WS msg]", msg?.type, msg);
+      handlers.onMsg(msg as ServerMsg);
+    } catch (err) {
+      if (shouldLog()) console.warn("[WS non-JSON]", e.data);
+    }
+  };
+
   return ws;
 }
+// export type ServerMsg = QuoteMsg | EquityTSMsg | OptionTSMsg | { type: "equity_ts"; symbol: string; data: any; provider?: "tradier"|"alpaca" }
+//   | { type: "option_ts"; symbol: string; data: any; provider?: "tradier"|"alpaca" }
+//   | { type: "quotes"; data: any; side?: string; side_src?: string; provider?: "tradier"|"alpaca" };
+
+// export function connectWS(handlers:{ onMsg:(m:ServerMsg)=>void; onOpen?():void; onClose?():void; onError?(e:any):void; }) {
+//   const ws = new WebSocket(SERVER_WS);
+
+//   ws.onopen = () => {
+//     ws.send('Hello from the client!')
+//   }
+
+//   ws.onmessage = (event) => {
+//     console.log('Received:', event.data)
+//   }
+
+//   ws.onopen = () => handlers.onOpen?.();
+//   ws.onclose = () => handlers.onClose?.();
+//   ws.onerror = (e) => handlers.onError?.(e as any);
+//   ws.onmessage = (e) => { try { handlers.onMsg(JSON.parse(e.data) as ServerMsg); } catch {} };
+//   return ws;
+// }
