@@ -5,6 +5,8 @@ import { createMaterialTopTabNavigator } from "@react-navigation/material-top-ta
 
 import TradeFlashScreen from "./src/screens/TradeFlashScreen";
 import OptionsTimeSalesScreen from "./src/screens/OptionsTimeSalesScreen";
+import OptionsOnlyTimeSalesScreen from "./src/screens/OptionsOnlyTimeSalesScreen"
+import OptionsOnlyFlashScreen from "./src/screens/OptionsOnlyFlashScreen"
 import ScannersScreen from "./src/screens/ScannersScreen";
 import AlpacaScannersScreen from "./src/screens/AlpacaScannersScreen";
 import AlpacaPopularScreen from "./src/screens/AlpacaPopularScreen";
@@ -58,6 +60,8 @@ function Root() {
       <Tab.Navigator>
         <Tab.Screen name="Trade Flash" component={TradeFlashScreen} />
         <Tab.Screen name="Options Time & Sales" component={OptionsTimeSalesScreen} />
+        <Tab.Screen name="Options T&S (opt)" component={OptionsOnlyTimeSalesScreen} />
+        <Tab.Screen name="Options Flash" component={OptionsOnlyFlashScreen} />
         <Tab.Screen name="Alpaca Popular" component={AlpacaPopularScreen} />
         <Tab.Screen name="Scanners" component={ScannersScreen} />
         <Tab.Screen name="Alpaca" component={AlpacaScannersScreen} />
