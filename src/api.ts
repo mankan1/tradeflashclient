@@ -1,4 +1,5 @@
-const SERVER_HTTP = "https://tradeflash-production.up.railway.app"; //"https://tradeflash-ypmg.onrender.com"; // process.env.EXPO_PUBLIC_SERVER_HTTP || "http://localhost:8080";
+//const SERVER_HTTP = "https://tradeflash-production.up.railway.app"; //"https://tradeflash-ypmg.onrender.com"; // process.env.EXPO_PUBLIC_SERVER_HTTP || "http://localhost:8080";
+const SERVER_HTTP = "http://localhost:8080";
 // import { SERVER_HTTP } from "./config";
 
 export async function updateProviderCredentials(body: {
@@ -15,13 +16,14 @@ export async function updateProviderCredentials(body: {
 }
 
 export async function fetchPopularCombinedSymbols(top = 40) {
-  const SERVER = "https://tradeflash-production.up.railway.app"; //"https://tradeflash-ypmg.onrender.com"; // process.env.EXPO_PUBLIC_SERVER || 'http://localhost:8080';
+  //const SERVER = "https://tradeflash-production.up.railway.app"; //"https://tradeflash-ypmg.onrender.com"; // process.env.EXPO_PUBLIC_SERVER || 'http://localhost:8080';
+  const SERVER = 'http://localhost:8080';
   const r = await fetch(`${SERVER}/popular/combined?top=${top}`);
   if (!r.ok) throw new Error(await r.text());
   return r.json() as Promise<{ ok: true; ts: number; symbols: string[]; source: string }>;
 }
 
-export async function fetchScan(opts: { provider?: "alpaca"|"polygon"; by?: "volume"|"trade_count"; top?: number; moneyness?: number; minVol?: number }) {
+export async function fetchScan(opts: { provider?: "alpaca"|"polygon"; by?: "volume"|"trades"; top?: number; moneyness?: number; minVol?: number }) {
   const p = new URLSearchParams();
   if (opts.provider)  p.set("provider", opts.provider);
   if (opts.by)        p.set("by", opts.by);
@@ -34,7 +36,8 @@ export async function fetchScan(opts: { provider?: "alpaca"|"polygon"; by?: "vol
 }
 
 export async function fetchScanForSymbolsC(symbols: string[], opts?: { limit?: number; moneyness?: number; minVol?: number }) {
-  const SERVER = "https://tradeflash-production.up.railway.app"; //"https://tradeflash-ypmg.onrender.com"; // process.env.EXPO_PUBLIC_SERVER || 'http://localhost:8080';
+  //const SERVER = "https://tradeflash-production.up.railway.app"; //"https://tradeflash-ypmg.onrender.com"; // process.env.EXPO_PUBLIC_SERVER || 'http://localhost:8080';
+  const SERVER = 'http://localhost:8080';
   const p = new URLSearchParams();
   if (symbols?.length) p.set('symbols', symbols.join(','));
   if (opts?.limit != null) p.set('limit', String(opts.limit));
@@ -212,7 +215,7 @@ export type ScanRow = {
 export type AlpRow = {
   symbol: string;
   volume?: number;
-  trade_count?: number;
+  trades?: number;
   change?: number;
   change_percent?: number;
   vol_today?: number;
@@ -220,18 +223,63 @@ export type AlpRow = {
   vr_prev?: number; // today vs prev-day volume ratio
 };
 
-export async function fetchAlpacaScan(opts?: { by?: "volume"|"trade_count"; top?: number; refresh?: 0|1 }) {
-  const p = new URLSearchParams();
-  if (opts?.by) p.set("by", opts.by);
-  if (opts?.top != null) p.set("top", String(opts.top));
-  if (opts?.refresh != null) p.set("refresh", String(opts.refresh));
-  const r = await fetch(`${SERVER_HTTP}/alpaca/scan?${p.toString()}`);
+// export async function fetchAlpacaScan(opts?: { by?: "volume"|"trade_count"; top?: number; refresh?: 0|1 }) {
+//   const p = new URLSearchParams();
+//   if (opts?.by) p.set("by", opts.by);
+//   if (opts?.top != null) p.set("top", String(opts.top));
+//   if (opts?.refresh != null) p.set("refresh", String(opts.refresh));
+//   const r = await fetch(`${SERVER_HTTP}/alpaca/scan?${p.toString()}`);
+//   if (!r.ok) throw new Error(await r.text());
+//   return r.json() as Promise<{
+//     ok: boolean;
+//     ts: number;
+//     params: { by: string; top: number };
+//     groups: { most_actives: AlpRow[]; gainers: AlpRow[]; losers: AlpRow[] };
+//     history: { days: number; samples: number; top_hits: { symbol: string; hits: number }[] };
+//   }>;
+// }
+// export async function fetchAlpacaScan(opts: {
+//   by?: "volume"|"trade_count";
+//   top?: number;
+//   session?: "pre"|"regular"|"post";
+//   filter?: ""|"gapup"|"gapdown";
+//   minGap?: number; // e.g., 0.02 = 2%
+// }) {
+//   const qs = new URLSearchParams();
+//   if (opts.by) qs.set("by", opts.by);
+//   if (opts.top != null) qs.set("top", String(opts.top));
+//   if (opts.session) qs.set("session", opts.session);
+//   if (opts.filter != null) qs.set("filter", opts.filter);
+//   if (opts.minGap != null) qs.set("minGap", String(opts.minGap));
+//   const url = `${SERVER_HTTP}/alpaca/scan?${qs.toString()}`;
+//   const r = await fetch(url);
+//   if (!r.ok) throw new Error(await r.text());
+//   return r.json();
+// }
+export async function fetchAlpacaScan(opts: {
+  by?: "volume"|"trades";
+  top?: number;
+  session?: "pre"|"regular"|"post";
+  filter?: ""|"gapup"|"gapdown";
+  minGap?: number;
+  refresh?: 0|1;
+}) {
+  const qs = new URLSearchParams();
+  if (opts.by) qs.set("by", opts.by);
+  if (opts.top != null) qs.set("top", String(opts.top));
+  if (opts.session) qs.set("session", opts.session);
+  if (opts.filter != null) qs.set("filter", opts.filter);
+  if (opts.minGap != null) qs.set("minGap", String(opts.minGap));
+  if (opts.refresh != null) qs.set("refresh", String(opts.refresh));
+  const r = await fetch(`${SERVER_HTTP}/alpaca/scan?${qs.toString()}`);
   if (!r.ok) throw new Error(await r.text());
-  return r.json() as Promise<{
-    ok: boolean;
-    ts: number;
-    params: { by: string; top: number };
-    groups: { most_actives: AlpRow[]; gainers: AlpRow[]; losers: AlpRow[] };
-    history: { days: number; samples: number; top_hits: { symbol: string; hits: number }[] };
-  }>;
+  return r.json();
 }
+
+// Shorthand “methods”
+export const scanPreGapUp    = (minGap=0.02, top=50) => fetchAlpacaScan({ session:"pre",    filter:"gapup",   minGap, top });
+export const scanPreGapDown  = (minGap=0.02, top=50) => fetchAlpacaScan({ session:"pre",    filter:"gapdown", minGap, top });
+export const scanRegGapUp    = (minGap=0.02, top=50) => fetchAlpacaScan({ session:"regular",filter:"gapup",   minGap, top });
+export const scanRegGapDown  = (minGap=0.02, top=50) => fetchAlpacaScan({ session:"regular",filter:"gapdown", minGap, top });
+export const scanPostGapUp   = (minGap=0.02, top=50) => fetchAlpacaScan({ session:"post",   filter:"gapup",   minGap, top });
+export const scanPostGapDown = (minGap=0.02, top=50) => fetchAlpacaScan({ session:"post",   filter:"gapdown", minGap, top });

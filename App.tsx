@@ -13,6 +13,7 @@ import AlpacaPopularScreen from "./src/screens/AlpacaPopularScreen";
 // import EquitiesAlpaca from "./src/screens/EquitiesAlpaca";
 import OptionsFlowApl from "./src/screens/OptionsFlowApl";
 import UoaPopularCombinedScreen from "./src/screens/UoaPopularCombinedScreen";
+import GapUp from "./src/screens/GapUp";
 import SettingsScreen from "./src/screens/SettingsScreen";
 
 import { startWatch } from "./src/api";
@@ -90,15 +91,16 @@ function Root() {
       <ProviderBanner />
       <Tab.Navigator>
         <Tab.Screen name="Trade Flash" component={TradeFlashScreen} />
-        <Tab.Screen name="Options Time & Sales" component={OptionsTimeSalesScreen} />
-        <Tab.Screen name="Options T&S (opt)" component={OptionsOnlyTimeSalesScreen} />
+        <Tab.Screen name="Op TimeSales" component={OptionsTimeSalesScreen} />
+        <Tab.Screen name="Options T&S" component={OptionsOnlyTimeSalesScreen} />
         <Tab.Screen name="Options Flash" component={OptionsOnlyFlashScreen} />
-        <Tab.Screen name="Alpaca Popular" component={AlpacaPopularScreen} />
+        <Tab.Screen name="Popular" component={AlpacaPopularScreen} />
         <Tab.Screen name="Scanners" component={ScannersScreen} />
-        <Tab.Screen name="Alpaca" component={AlpacaScannersScreen} />
+        <Tab.Screen name="AlUOA" component={AlpacaScannersScreen} />
         {/* <Tab.Screen name="EquitiesAlpaca" component={EquitiesAlpaca} /> */}
         <Tab.Screen name="OptionsFlowApl" component={OptionsFlowApl} />  
-        <Tab.Screen name="UOA • Popular Combo" component={UoaPopularCombinedScreen} />
+        <Tab.Screen name="UOA" component={UoaPopularCombinedScreen} />
+        <Tab.Screen name="GapUp" component={GapUp} />
         <Tab.Screen name="Settings" component={SettingsScreen} />
       </Tab.Navigator>
     </NavigationContainer>
