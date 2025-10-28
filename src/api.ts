@@ -1,5 +1,5 @@
-//const SERVER_HTTP = "https://tradeflash-production.up.railway.app"; //"https://tradeflash-ypmg.onrender.com"; // process.env.EXPO_PUBLIC_SERVER_HTTP || "http://localhost:8080";
-const SERVER_HTTP = "http://localhost:8080";
+const SERVER_HTTP = "https://tradeflash-production.up.railway.app"; //"https://tradeflash-ypmg.onrender.com"; // process.env.EXPO_PUBLIC_SERVER_HTTP || "http://localhost:8080";
+//const SERVER_HTTP = "http://localhost:8080";
 // import { SERVER_HTTP } from "./config";
 
 export async function updateProviderCredentials(body: {
@@ -16,8 +16,8 @@ export async function updateProviderCredentials(body: {
 }
 
 export async function fetchPopularCombinedSymbols(top = 40) {
-  //const SERVER = "https://tradeflash-production.up.railway.app"; //"https://tradeflash-ypmg.onrender.com"; // process.env.EXPO_PUBLIC_SERVER || 'http://localhost:8080';
-  const SERVER = 'http://localhost:8080';
+  const SERVER = "https://tradeflash-production.up.railway.app"; //"https://tradeflash-ypmg.onrender.com"; // process.env.EXPO_PUBLIC_SERVER || 'http://localhost:8080';
+  //const SERVER = 'http://localhost:8080';
   const r = await fetch(`${SERVER}/popular/combined?top=${top}`);
   if (!r.ok) throw new Error(await r.text());
   return r.json() as Promise<{ ok: true; ts: number; symbols: string[]; source: string }>;
@@ -36,8 +36,8 @@ export async function fetchScan(opts: { provider?: "alpaca"|"polygon"; by?: "vol
 }
 
 export async function fetchScanForSymbolsC(symbols: string[], opts?: { limit?: number; moneyness?: number; minVol?: number }) {
-  //const SERVER = "https://tradeflash-production.up.railway.app"; //"https://tradeflash-ypmg.onrender.com"; // process.env.EXPO_PUBLIC_SERVER || 'http://localhost:8080';
-  const SERVER = 'http://localhost:8080';
+  const SERVER = "https://tradeflash-production.up.railway.app"; //"https://tradeflash-ypmg.onrender.com"; // process.env.EXPO_PUBLIC_SERVER || 'http://localhost:8080';
+  //const SERVER = 'http://localhost:8080';
   const p = new URLSearchParams();
   if (symbols?.length) p.set('symbols', symbols.join(','));
   if (opts?.limit != null) p.set('limit', String(opts.limit));
