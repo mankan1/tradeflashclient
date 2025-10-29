@@ -34,7 +34,8 @@ export default function ScannersScreen() {
   // Sort key for “most actives” (only applies to providers that support it)
   const [by, setBy] = useState<"volume" | "trade_count">("volume");
 
-  // --- NEW: Yahoo launcher (tap → quote, long-press → options) ---
+  // --- Yahoo launchers ---
+  // Tap → underlying quote, long-press → options chain
   const openYahoo = async (symbol: string, opts?: { optionsPage?: boolean }) => {
     const enc = encodeURIComponent(symbol);
     const url = opts?.optionsPage
@@ -46,6 +47,23 @@ export default function ScannersScreen() {
       else Alert.alert("Can't open link", url);
     } catch (e: any) {
       Alert.alert("Failed to open Yahoo Finance", String(e));
+    }
+  };
+
+  // NEW: open a specific OCC option contract, e.g., INTC251031C00042000
+  const openYahooOption = async (occ: string) => {
+    // Try to extract the underlying root from OCC (letters up to first digit)
+    // OCC format: <ROOT><YYMMDD><C|P><strike with 8 digits>
+    const m = /^([A-Za-z\.]+)\d{6}[CP]\d{8}$/.exec(occ);
+    const root = m ? m[1] : occ.replace(/(\d.*)$/, ""); // fallback: strip from first digit
+    const encRoot = encodeURIComponent(root);
+    const url = `https://finance.yahoo.com/quote/${encRoot}/options?contractSymbol=${encodeURIComponent(occ)}&p=${encRoot}`;
+    try {
+      const ok = await Linking.canOpenURL(url);
+      if (ok) await Linking.openURL(url);
+      else Alert.alert("Can't open option link", url);
+    } catch (e: any) {
+      Alert.alert("Failed to open option on Yahoo", String(e));
     }
   };
 
@@ -116,7 +134,7 @@ export default function ScannersScreen() {
   const Row = ({ r }: { r: ScanRow }) => (
     <View style={s.row}>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-        {/* CHANGED: make symbol pressable to launch Yahoo */}
+        {/* Pressable underlying symbol */}
         <TouchableOpacity
           onPress={() => openYahoo(r.symbol)}
           onLongPress={() => openYahoo(r.symbol, { optionsPage: true })}
@@ -171,11 +189,18 @@ export default function ScannersScreen() {
       {Array.isArray(r.uoa_top) && r.uoa_top.length ? (
         <View style={{ marginTop: 4 }}>
           {r.uoa_top.map((o, i) => (
-            <Text key={`${r.symbol}_uoa_${i}`} style={s.dim}>
-              • {o.occ} — vol {Number(o.vol).toLocaleString()} vs OI{" "}
-              {Number(o.oi).toLocaleString()}
-              {typeof o.last === "number" ? ` @ ${o.last}` : ""}
-            </Text>
+            <View key={`${r.symbol}_uoa_${i}`} style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
+              {/* NEW: OCC contract is pressable → opens that exact option on Yahoo */}
+              <TouchableOpacity
+                onPress={() => openYahooOption(o.occ)}
+                accessibilityRole="link"
+                accessibilityLabel={`Open ${o.occ} on Yahoo Finance`}
+                hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+              >
+                <Text style={[s.dim, { textDecorationLine: "underline" }]}>• {o.occ}</Text>
+              </TouchableOpacity>
+              <Text style={s.dim}>— vol {Number(o.vol).toLocaleString()} vs OI {Number(o.oi).toLocaleString()}{typeof o.last === "number" ? ` @ ${o.last}` : ""}</Text>
+            </View>
           ))}
         </View>
       ) : null}

@@ -35,17 +35,34 @@ export default function UoaPopularCombinedScreen() {
   const inflight = useRef(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // NEW: open Yahoo for a symbol (options page variant commented below)
-  const openYahoo = async (symbol: string) => {
+  // Open Yahoo for an underlying
+  const openYahoo = async (symbol: string, opts?: { optionsPage?: boolean }) => {
     const enc = encodeURIComponent(symbol);
-    const url = `https://finance.yahoo.com/quote/${enc}?p=${enc}`;
-    // const url = `https://finance.yahoo.com/quote/${enc}/options?p=${enc}`; // <- use for options directly
+    const url = opts?.optionsPage
+      ? `https://finance.yahoo.com/quote/${enc}/options?p=${enc}`
+      : `https://finance.yahoo.com/quote/${enc}?p=${enc}`;
     try {
       const ok = await Linking.canOpenURL(url);
       if (ok) await Linking.openURL(url);
       else Alert.alert("Can't open link", url);
     } catch (e:any) {
       Alert.alert("Failed to open Yahoo Finance", String(e));
+    }
+  };
+
+  // Open Yahoo for a specific OCC option (e.g., INTC251031C00042000)
+  const openYahooOption = async (occ: string) => {
+    // OCC: <ROOT><YYMMDD><C|P><strike 8 digits>
+    const m = /^([A-Za-z\.]+)\d{6}[CP]\d{8}$/.exec(occ);
+    const root = m ? m[1] : occ.replace(/(\d.*)$/, "");
+    const encRoot = encodeURIComponent(root);
+    const url = `https://finance.yahoo.com/quote/${encRoot}/options?contractSymbol=${encodeURIComponent(occ)}&p=${encRoot}`;
+    try {
+      const ok = await Linking.canOpenURL(url);
+      if (ok) await Linking.openURL(url);
+      else Alert.alert("Can't open option link", url);
+    } catch (e:any) {
+      Alert.alert("Failed to open option on Yahoo", String(e));
     }
   };
 
@@ -100,9 +117,11 @@ export default function UoaPopularCombinedScreen() {
   const RowView = ({ r }: { r: Row }) => (
     <View style={s.row}>
       <View style={{ flexDirection:"row", justifyContent:"space-between", alignItems:"center" }}>
-        {/* CHANGED: make symbol a link */}
+        {/* Underlying pressable: tap → quote, long-press → options */}
         <TouchableOpacity
           onPress={() => openYahoo(r.symbol)}
+          onLongPress={() => openYahoo(r.symbol, { optionsPage: true })}
+          delayLongPress={250}
           accessibilityRole="link"
           accessibilityLabel={`Open ${r.symbol} on Yahoo Finance`}
           hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
@@ -127,9 +146,18 @@ export default function UoaPopularCombinedScreen() {
       {!!r.uoa_top?.length && (
         <View style={{ marginTop:6, gap:4 }}>
           {r.uoa_top.slice(0,3).map((o, idx) => (
-            <Text key={idx} style={s.note}>
-              {o.occ} • vol {o.vol} • OI {o.oi} • last {o.last}
-            </Text>
+            <View key={idx} style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
+              {/* OCC contract pressable → opens exact option on Yahoo */}
+              <TouchableOpacity
+                onPress={() => openYahooOption(o.occ)}
+                accessibilityRole="link"
+                accessibilityLabel={`Open ${o.occ} on Yahoo Finance`}
+                hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+              >
+                <Text style={[s.note, { textDecorationLine: "underline" }]}>{o.occ}</Text>
+              </TouchableOpacity>
+              <Text style={s.note}>• vol {o.vol} • OI {o.oi} • last {o.last}</Text>
+            </View>
           ))}
         </View>
       )}
