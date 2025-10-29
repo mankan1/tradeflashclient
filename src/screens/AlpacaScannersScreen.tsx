@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { View, Text, FlatList, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Linking, Alert } from "react-native";
 import { fetchAlpacaScan } from "../api";
 
 // Minimal row types we actually render
@@ -29,25 +29,31 @@ export default function AlpacaScannersScreen() {
   const [ts, setTs] = useState<number>(0);
   const [err, setErr] = useState<string>("");
 
+  // NEW: Yahoo launcher
+  const openYahoo = async (symbol: string, opts?: { optionsPage?: boolean }) => {
+    const enc = encodeURIComponent(symbol);
+    const url = opts?.optionsPage
+      ? `https://finance.yahoo.com/quote/${enc}/options?p=${enc}`
+      : `https://finance.yahoo.com/quote/${enc}?p=${enc}`;
+    try {
+      const ok = await Linking.canOpenURL(url);
+      if (ok) await Linking.openURL(url);
+      else Alert.alert("Can't open link", url);
+    } catch (e: any) {
+      Alert.alert("Failed to open Yahoo Finance", String(e));
+    }
+  };
+
   useEffect(() => {
     let alive = true;
 
     const go = async () => {
       setErr("");
       try {
-        // Map UI -> API param
         const byParam = by === "trades" ? "trades" : "volume";
-
-        const res = await fetchAlpacaScan({
-          by: byParam as "volume" | "trades",
-          top: 30,
-          // you can add session/filter/minGap here later if you wire those controls
-          refresh: 1,
-        });
-
+        const res = await fetchAlpacaScan({ by: byParam, top: 30, refresh: 1 });
         if (!alive) return;
 
-        // Defensive guards — server may omit groups/history or return ok:false
         const groups = (res && res.groups) || {};
         const history = (res && res.history && res.history.top_hits) || [];
 
@@ -66,7 +72,7 @@ export default function AlpacaScannersScreen() {
     };
 
     go();
-    const id = setInterval(go, 60_000); // refresh each minute
+    const id = setInterval(go, 60_000);
     return () => {
       alive = false;
       clearInterval(id);
@@ -82,33 +88,57 @@ export default function AlpacaScannersScreen() {
     { key: "history", label: "7d History" },
   ];
 
-  const Info = ({ r }: { r: MostActiveRow }) => (
-    <View style={s.row}>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-        <Text style={s.sym}>{String((r as any).symbol || "")}</Text>
-        {"change_percent" in r && r.change_percent != null ? (
-          <Text style={[s.pill, { backgroundColor: (r.change_percent || 0) >= 0 ? "#dcfce7" : "#fee2e2" }]}>
-            {((r.change_percent || 0) * 100).toFixed(2)}%
-          </Text>
-        ) : null}
-      </View>
+  const Info = ({ r }: { r: MostActiveRow }) => {
+    const sym = String((r as any).symbol || "");
+    return (
+      <View style={s.row}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+          {/* Pressable ticker */}
+          <TouchableOpacity
+            onPress={() => openYahoo(sym)}
+            onLongPress={() => openYahoo(sym, { optionsPage: true })}
+            delayLongPress={250}
+            accessibilityRole="link"
+            accessibilityLabel={`Open ${sym} on Yahoo Finance`}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+          >
+            <Text style={[s.sym, { textDecorationLine: "underline" }]}>{sym}</Text>
+          </TouchableOpacity>
 
-      <View style={{ flexDirection: "row", gap: 10, flexWrap: "wrap", marginTop: 6 }}>
-        {"volume" in r ? <Text style={s.pill}>Vol {Number(r.volume || 0).toLocaleString()}</Text> : null}
-        {"trades" in r ? <Text style={s.pill}>Trades {Number((r as any).trades || 0).toLocaleString()}</Text> : null}
-        {"vr_prev" in r ? (
-          <Text style={[s.pill, { backgroundColor: (r.vr_prev || 0) >= 3 ? "#fde68a" : "#e5e7eb" }]}>
-            VR(prev) {(r.vr_prev || 0).toFixed(2)}x
-          </Text>
-        ) : null}
+          {"change_percent" in r && r.change_percent != null ? (
+            <Text style={[s.pill, { backgroundColor: (r.change_percent || 0) >= 0 ? "#dcfce7" : "#fee2e2" }]}>
+              {((r.change_percent || 0) * 100).toFixed(2)}%
+            </Text>
+          ) : null}
+        </View>
+
+        <View style={{ flexDirection: "row", gap: 10, flexWrap: "wrap", marginTop: 6 }}>
+          {"volume" in r ? <Text style={s.pill}>Vol {Number(r.volume || 0).toLocaleString()}</Text> : null}
+          {"trades" in r ? <Text style={s.pill}>Trades {Number((r as any).trades || 0).toLocaleString()}</Text> : null}
+          {"vr_prev" in r ? (
+            <Text style={[s.pill, { backgroundColor: (r.vr_prev || 0) >= 3 ? "#fde68a" : "#e5e7eb" }]}>
+              VR(prev) {(r.vr_prev || 0).toFixed(2)}x
+            </Text>
+          ) : null}
+        </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   const History = ({ h }: { h: HitRow }) => (
     <View style={s.row}>
       <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-        <Text style={s.sym}>{h.symbol}</Text>
+        {/* Pressable ticker in history, too */}
+        <TouchableOpacity
+          onPress={() => openYahoo(h.symbol)}
+          onLongPress={() => openYahoo(h.symbol, { optionsPage: true })}
+          delayLongPress={250}
+          accessibilityRole="link"
+          accessibilityLabel={`Open ${h.symbol} on Yahoo Finance`}
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+        >
+          <Text style={[s.sym, { textDecorationLine: "underline" }]}>{h.symbol}</Text>
+        </TouchableOpacity>
         <Text style={s.pill}>hits {h.hits}</Text>
       </View>
     </View>
@@ -157,3 +187,4 @@ const s = StyleSheet.create({
   sym: { fontWeight: "800" },
   pill: { color: "#374151", backgroundColor: "#e5e7eb", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 999, fontSize: 12 },
 });
+

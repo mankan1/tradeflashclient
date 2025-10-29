@@ -1,5 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, TextInput, Switch } from "react-native";
+import {
+  View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl,
+  TextInput, Switch, Linking, Alert
+} from "react-native";
 import { fetchPopularSymbols, fetchScanForSymbols } from "../api";
 
 type GroupKey = "popular" | "most_active_large" | "most_active_mid" | "most_active_small";
@@ -34,6 +37,21 @@ export default function AlpacaPopularScreen() {
   const [tab, setTab] = useState<GroupKey>("popular");
   const rows = useMemo(() => data[tab] || [], [data, tab]);
 
+  // NEW: Yahoo launcher
+  const openYahoo = async (symbol: string, opts?: { optionsPage?: boolean }) => {
+    const enc = encodeURIComponent(symbol);
+    const url = opts?.optionsPage
+      ? `https://finance.yahoo.com/quote/${enc}/options?p=${enc}`
+      : `https://finance.yahoo.com/quote/${enc}?p=${enc}`;
+    try {
+      const ok = await Linking.canOpenURL(url);
+      if (ok) await Linking.openURL(url);
+      else Alert.alert("Can't open link", url);
+    } catch (e: any) {
+      Alert.alert("Failed to open Yahoo Finance", String(e));
+    }
+  };
+
   const load = async () => {
     if (inflight.current) return;
     inflight.current = true;
@@ -58,9 +76,7 @@ export default function AlpacaPopularScreen() {
   };
 
   useEffect(() => { load(); }, []); // initial
-
-  // reload when knobs change
-  useEffect(() => { load(); }, [limit, moneyness, minVol]);
+  useEffect(() => { load(); }, [limit, moneyness, minVol]); // reload when knobs change
 
   // auto refresh
   useEffect(() => {
@@ -77,7 +93,18 @@ export default function AlpacaPopularScreen() {
   const RowView = ({ r }: { r: Row }) => (
     <View style={s.row}>
       <View style={{ flexDirection:"row", justifyContent:"space-between", alignItems:"center" }}>
-        <Text style={s.sym}>{r.symbol}</Text>
+        {/* CHANGED: make ticker pressable */}
+        <TouchableOpacity
+          onPress={() => openYahoo(r.symbol)}
+          onLongPress={() => openYahoo(r.symbol, { optionsPage: true })} // long-press → options
+          delayLongPress={250}
+          accessibilityRole="link"
+          accessibilityLabel={`Open ${r.symbol} on Yahoo Finance`}
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+        >
+          <Text style={[s.sym, { textDecorationLine: "underline" }]}>{r.symbol}</Text>
+        </TouchableOpacity>
+
         {"vr" in r && r.vr != null ? (
           <Text style={[s.pill, { backgroundColor: (r.vr||0) >= 3 ? "#fde68a" : "#e5e7eb" }]}>
             VR {(r.vr || 0).toFixed(2)}x

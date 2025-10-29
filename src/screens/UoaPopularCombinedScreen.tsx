@@ -1,5 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, TextInput, RefreshControl, Switch } from "react-native";
+import {
+  View, Text, FlatList, StyleSheet, TouchableOpacity, TextInput,
+  RefreshControl, Switch, Linking, Alert
+} from "react-native";
 import { fetchPopularCombinedSymbols, fetchScanForSymbolsC } from "../api";
 
 type Row = {
@@ -20,17 +23,31 @@ export default function UoaPopularCombinedScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   // knobs
-  const [top, setTop] = useState(40);           // how many roots to fetch from /popular/combined
-  const [limit, setLimit] = useState(50);       // limit per /scan groups (won’t matter, we’ll filter to UOA)
+  const [top, setTop] = useState(40);
+  const [limit, setLimit] = useState(50);
   const [moneyness, setMoneyness] = useState(0.2);
   const [minVol, setMinVol] = useState(500);
-  const [onlyUoa, setOnlyUoa] = useState(true); // hide rows with uoa_count = 0
+  const [onlyUoa, setOnlyUoa] = useState(true);
 
   // auto refresh
   const [auto, setAuto] = useState(true);
   const [intervalSec, setIntervalSec] = useState(60);
   const inflight = useRef(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // NEW: open Yahoo for a symbol (options page variant commented below)
+  const openYahoo = async (symbol: string) => {
+    const enc = encodeURIComponent(symbol);
+    const url = `https://finance.yahoo.com/quote/${enc}?p=${enc}`;
+    // const url = `https://finance.yahoo.com/quote/${enc}/options?p=${enc}`; // <- use for options directly
+    try {
+      const ok = await Linking.canOpenURL(url);
+      if (ok) await Linking.openURL(url);
+      else Alert.alert("Can't open link", url);
+    } catch (e:any) {
+      Alert.alert("Failed to open Yahoo Finance", String(e));
+    }
+  };
 
   const load = async () => {
     if (inflight.current) return;
@@ -42,7 +59,6 @@ export default function UoaPopularCombinedScreen() {
       setSymbols(syms);
 
       const scan = await fetchScanForSymbolsC(syms, { limit, moneyness, minVol });
-      // Combine all groups, then unique by symbol (scan returns multiple groups)
       const g = scan.groups || {};
       const all: Row[] = [
         ...(g.popular || []),
@@ -54,7 +70,6 @@ export default function UoaPopularCombinedScreen() {
       for (const r of all) uniq.set(r.symbol, r);
       let list = [...uniq.values()];
       if (onlyUoa) list = list.filter(r => (r.uoa_count || 0) > 0);
-      // sort: UOA count desc, then volume ratio desc
       list.sort((a,b) => (b.uoa_count||0) - (a.uoa_count||0) || (b.vr||0) - (a.vr||0));
 
       setRows(list);
@@ -68,12 +83,9 @@ export default function UoaPopularCombinedScreen() {
     }
   };
 
-  useEffect(() => { load(); }, []); // first mount
-
-  // reload when knobs change
+  useEffect(() => { load(); }, []);
   useEffect(() => { load(); }, [top, limit, moneyness, minVol, onlyUoa]);
 
-  // auto refresh loop
   useEffect(() => {
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
     if (auto) {
@@ -88,19 +100,30 @@ export default function UoaPopularCombinedScreen() {
   const RowView = ({ r }: { r: Row }) => (
     <View style={s.row}>
       <View style={{ flexDirection:"row", justifyContent:"space-between", alignItems:"center" }}>
-        <Text style={s.sym}>{r.symbol}</Text>
+        {/* CHANGED: make symbol a link */}
+        <TouchableOpacity
+          onPress={() => openYahoo(r.symbol)}
+          accessibilityRole="link"
+          accessibilityLabel={`Open ${r.symbol} on Yahoo Finance`}
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+        >
+          <Text style={[s.sym, { textDecorationLine: "underline" }]}>{r.symbol}</Text>
+        </TouchableOpacity>
+
         {r.uoa_count != null && (
           <Text style={[s.pill, { backgroundColor: r.uoa_count > 0 ? "#fde68a" : "#e5e7eb" }]}>
             UOA {r.uoa_count}
           </Text>
         )}
       </View>
+
       <View style={{ flexDirection:"row", gap:10, flexWrap:"wrap" }}>
         {"last" in r && r.last != null ? <Text style={s.pill}>Last {r.last}</Text> : null}
         {"volume" in r ? <Text style={s.pill}>Vol {Number(r.volume||0).toLocaleString()}</Text> : null}
         {"avg_volume" in r ? <Text style={s.pill}>Avg {Number(r.avg_volume||0).toLocaleString()}</Text> : null}
         {"vr" in r ? <Text style={s.pill}>VR {(r.vr||0).toFixed(2)}x</Text> : null}
       </View>
+
       {!!r.uoa_top?.length && (
         <View style={{ marginTop:6, gap:4 }}>
           {r.uoa_top.slice(0,3).map((o, idx) => (

@@ -1,6 +1,6 @@
 // src/screens/ScannersScreen.tsx
 import React, { useEffect, useMemo, useState } from "react";
-import { View, Text, FlatList, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Linking, Alert } from "react-native";
 import { fetchScan } from "../api";
 import { useProvider } from "../state/ProviderContext";
 
@@ -33,6 +33,21 @@ export default function ScannersScreen() {
 
   // Sort key for “most actives” (only applies to providers that support it)
   const [by, setBy] = useState<"volume" | "trade_count">("volume");
+
+  // --- NEW: Yahoo launcher (tap → quote, long-press → options) ---
+  const openYahoo = async (symbol: string, opts?: { optionsPage?: boolean }) => {
+    const enc = encodeURIComponent(symbol);
+    const url = opts?.optionsPage
+      ? `https://finance.yahoo.com/quote/${enc}/options?p=${enc}`
+      : `https://finance.yahoo.com/quote/${enc}?p=${enc}`;
+    try {
+      const ok = await Linking.canOpenURL(url);
+      if (ok) await Linking.openURL(url);
+      else Alert.alert("Can't open link", url);
+    } catch (e: any) {
+      Alert.alert("Failed to open Yahoo Finance", String(e));
+    }
+  };
 
   // Normalize server responses to the 4 buckets this screen shows.
   // - Your Alpaca/Tradier /scan returns: { popular, most_active_large, most_active_mid, most_active_small }
@@ -101,7 +116,18 @@ export default function ScannersScreen() {
   const Row = ({ r }: { r: ScanRow }) => (
     <View style={s.row}>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-        <Text style={s.sym}>{r.symbol}</Text>
+        {/* CHANGED: make symbol pressable to launch Yahoo */}
+        <TouchableOpacity
+          onPress={() => openYahoo(r.symbol)}
+          onLongPress={() => openYahoo(r.symbol, { optionsPage: true })}
+          delayLongPress={250}
+          accessibilityRole="link"
+          accessibilityLabel={`Open ${r.symbol} on Yahoo Finance`}
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+        >
+          <Text style={[s.sym, { textDecorationLine: "underline" }]}>{r.symbol}</Text>
+        </TouchableOpacity>
+
         <View style={{ flexDirection: "row", gap: 6, alignItems: "center" }}>
           {typeof r.change_percent === "number" ? (
             <Text
@@ -229,3 +255,4 @@ const s = StyleSheet.create({
     fontSize: 12,
   },
 });
+
