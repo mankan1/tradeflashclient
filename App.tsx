@@ -90,15 +90,10 @@ function Root() {
     <NavigationContainer>
       <ProviderBanner />
       <Tab.Navigator>
-        <Tab.Screen name="Trade Flash" component={TradeFlashScreen} />
-        <Tab.Screen name="Op TimeSales" component={OptionsTimeSalesScreen} />
-        <Tab.Screen name="Options T&S" component={OptionsOnlyTimeSalesScreen} />
-        <Tab.Screen name="Options Flash" component={OptionsOnlyFlashScreen} />
         <Tab.Screen name="Popular" component={AlpacaPopularScreen} />
         <Tab.Screen name="Scanners" component={ScannersScreen} />
         <Tab.Screen name="AlUOA" component={AlpacaScannersScreen} />
         {/* <Tab.Screen name="EquitiesAlpaca" component={EquitiesAlpaca} /> */}
-        <Tab.Screen name="OptionsFlowApl" component={OptionsFlowApl} />  
         <Tab.Screen name="UOA" component={UoaPopularCombinedScreen} />
         <Tab.Screen name="GapUp" component={GapUp} />
         <Tab.Screen name="Settings" component={SettingsScreen} />
