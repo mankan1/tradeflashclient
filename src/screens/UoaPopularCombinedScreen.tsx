@@ -35,6 +35,9 @@ export default function UoaPopularCombinedScreen() {
   const inflight = useRef(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Roots display toggle
+  const [rootsExpanded, setRootsExpanded] = useState(false);
+
   // Open Yahoo for an underlying
   const openYahoo = async (symbol: string, opts?: { optionsPage?: boolean }) => {
     const enc = encodeURIComponent(symbol);
@@ -164,6 +167,49 @@ export default function UoaPopularCombinedScreen() {
     </View>
   );
 
+  // Roots view — clickable chips for ALL symbols (tap = quote, long-press = options)
+  const RootsView = () => {
+    const shown = rootsExpanded ? symbols : symbols.slice(0, 30);
+    return (
+      <View style={{ marginTop: 4 }}>
+        <View style={{ flexDirection:"row", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+          <Text style={s.dim}>Roots ({symbols.length}):</Text>
+
+          {/* chip list */}
+          <View style={{ flexDirection:"row", flexWrap:"wrap", gap:6, flex:1 }}>
+            {shown.map((sym) => (
+              <TouchableOpacity
+                key={sym}
+                onPress={() => openYahoo(sym)}
+                onLongPress={() => openYahoo(sym, { optionsPage: true })}
+                delayLongPress={250}
+                accessibilityRole="link"
+                accessibilityLabel={`Open ${sym} on Yahoo Finance`}
+                hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+              >
+                <Text style={s.chip}>{sym}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* expand / collapse */}
+          {symbols.length > 30 && (
+            <TouchableOpacity onPress={() => setRootsExpanded(x => !x)} hitSlop={{ top:6,bottom:6,left:6,right:6 }}>
+              <Text style={[s.dim, { textDecorationLine:"underline" }]}>
+                {rootsExpanded ? "Show less" : `Show all`}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* timestamp / errors */}
+        <Text style={[s.dim, { marginTop: 4 }]}>
+          {err ? `Error: ${err}` : `Refreshed ${new Date(ts || Date.now()).toLocaleTimeString()}`}
+        </Text>
+      </View>
+    );
+  };
+
   return (
     <View style={{ flex:1 }}>
       {/* Controls */}
@@ -196,10 +242,9 @@ export default function UoaPopularCombinedScreen() {
           <Text style={s.dim}>Only UOA</Text>
           <Switch value={onlyUoa} onValueChange={setOnlyUoa} />
         </View>
-        <Text style={[s.dim, { marginTop:4 }]}>
-          {err ? `Error: ${err}` : `Roots (${symbols.length}): ${symbols.slice(0,12).join(", ")}${symbols.length>12?"…":""}`}
-        </Text>
-        <Text style={[s.dim]}>Refreshed {new Date(ts || Date.now()).toLocaleTimeString()}</Text>
+
+        {/* NEW: clickable full roots list */}
+        <RootsView />
       </View>
 
       <FlatList
@@ -221,6 +266,15 @@ const s = StyleSheet.create({
   sym:{ fontWeight:"800" },
   pill:{ color:"#374151", backgroundColor:"#e5e7eb", paddingHorizontal:6, paddingVertical:2, borderRadius:999, fontSize:12 },
   dim:{ color:"#6b7280" },
-  note:{ color:"#374151" }
+  note:{ color:"#374151" },
+  chip:{
+    color:"#111827",
+    backgroundColor:"#eef2ff",
+    borderColor:"#c7d2fe",
+    borderWidth:1,
+    paddingHorizontal:8,
+    paddingVertical:4,
+    borderRadius:999,
+    overflow:"hidden"
+  }
 });
-
